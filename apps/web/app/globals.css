@@ -62,8 +62,8 @@ html {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* The solid colour lives on html only, so the fixed aura and the spinning G (z-index -1) show through. */
 body {
-  background: var(--color-ink);
   color: var(--color-cream);
   font-feature-settings: "ss01", "cv11";
 }

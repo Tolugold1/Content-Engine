@@ -3,6 +3,7 @@ import "@fontsource-variable/bricolage-grotesque";
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
+import { BackgroundEmblem } from "@/components/emblem";
 import { SiteHeader } from "@/components/site-header";
 
 export const metadata: Metadata = {
@@ -21,6 +22,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en">
       <body className="min-h-dvh font-sans antialiased">
         <div className="bg-aura" aria-hidden />
+        <BackgroundEmblem />
         <SiteHeader />
         <main className="mx-auto max-w-7xl px-4 pb-24 sm:px-6">{children}</main>
       </body>

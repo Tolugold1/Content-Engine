@@ -3,7 +3,7 @@ import { firstPassApprovalRate, latestViews } from "@content-engine/core";
 import { ArrowRight, BadgeCheck, CircleDollarSign, Inbox, Radio, Send, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { DraftCard } from "@/components/draft-card";
-import { HeroCanvas } from "@/components/hero-canvas";
+import { HeroEmblem } from "@/components/emblem";
 import { StatTile } from "@/components/stat-tile";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { ScanButton } from "@/components/scan-button";
@@ -66,7 +66,7 @@ export default async function StudioPage() {
           </div>
           <div className="relative -mx-6 h-[280px] sm:mx-0 sm:h-[400px]">
             <div className="absolute inset-x-10 bottom-6 h-16 rounded-[50%] bg-gold/20 blur-3xl" aria-hidden />
-            <HeroCanvas />
+            <HeroEmblem />
           </div>
         </div>
       </section>

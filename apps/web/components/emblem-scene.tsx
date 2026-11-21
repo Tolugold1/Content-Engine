@@ -6,6 +6,14 @@ import { useMemo, useRef } from "react";
 import * as THREE from "three";
 import { usePrefersReducedMotion } from "./use-reduced-motion";
 
+export type EmblemVariant = "hero" | "background";
+
+/** How each placement behaves: the hero reacts to the pointer and sparkles; the background just turns slowly. */
+const VARIANTS: Record<EmblemVariant, { spin: number; pointer: boolean; sparkles: number; dpr: [number, number]; cameraZ: number }> = {
+  hero: { spin: 0.65, pointer: true, sparkles: 80, dpr: [1, 1.75], cameraZ: 4.6 },
+  background: { spin: 0.28, pointer: false, sparkles: 0, dpr: [1, 1], cameraZ: 4.2 },
+};
+
 /** Builds the extruded "G" of the Golden Gist mark. */
 function useGoldenG() {
   return useMemo(() => {
@@ -41,20 +49,22 @@ function useGoldenG() {
   }, []);
 }
 
-function Emblem({ still }: { still: boolean }) {
+function Emblem({ variant, still }: { variant: EmblemVariant; still: boolean }) {
   const group = useRef<THREE.Group>(null);
   const ring = useRef<THREE.Mesh>(null);
   const geometry = useGoldenG();
+  const settings = VARIANTS[variant];
 
   useFrame((state, delta) => {
     const g = group.current;
     if (!g) return;
-    const sway = still ? 0 : Math.sin(state.clock.elapsedTime * 0.45) * 0.35;
-    const targetY = still ? -0.25 : state.pointer.x * 0.45 + sway;
-    const targetX = still ? 0.08 : -state.pointer.y * 0.25;
-    g.rotation.y = THREE.MathUtils.damp(g.rotation.y, targetY, 3, delta);
-    g.rotation.x = THREE.MathUtils.damp(g.rotation.x, targetX, 3, delta);
-    if (ring.current && !still) ring.current.rotation.z += delta * 0.3;
+    if (!still) {
+      // Continuous turn around the vertical axis; the pointer only tilts it.
+      g.rotation.y += delta * settings.spin;
+      if (ring.current) ring.current.rotation.z += delta * 0.3;
+    }
+    const tilt = still || !settings.pointer ? 0.08 : -state.pointer.y * 0.25;
+    g.rotation.x = THREE.MathUtils.damp(g.rotation.x, tilt, 3, delta);
   });
 
   return (
@@ -82,25 +92,30 @@ function StaticFallback() {
   );
 }
 
-export default function HeroScene() {
+/** The rotating gold G. One scene, used by the Studio hero and as the background of every other screen. */
+export default function EmblemScene({ variant = "hero" }: { variant?: EmblemVariant }) {
   const reduced = usePrefersReducedMotion();
+  const settings = VARIANTS[variant];
 
   return (
     <Canvas
-      dpr={[1, 1.75]}
-      camera={{ position: [0, 0, 4.6], fov: 38 }}
-      gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
+      dpr={settings.dpr}
+      camera={{ position: [0, 0, settings.cameraZ], fov: 38 }}
+      gl={{ antialias: true, alpha: true, powerPreference: variant === "hero" ? "high-performance" : "low-power" }}
       frameloop={reduced ? "demand" : "always"}
       fallback={<StaticFallback />}
-      aria-label="Golden Gist emblem"
+      aria-hidden={variant === "background"}
+      aria-label={variant === "hero" ? "Golden Gist emblem" : undefined}
     >
       <ambientLight intensity={0.25} />
       <directionalLight position={[3, 4, 5]} intensity={1.4} color="#fff3d1" />
       <directionalLight position={[-4, -2, 2]} intensity={0.6} color="#D4AF37" />
-      <Float speed={reduced ? 0 : 1.4} rotationIntensity={reduced ? 0 : 0.3} floatIntensity={reduced ? 0 : 0.8}>
-        <Emblem still={reduced} />
+      <Float speed={reduced ? 0 : 1.4} rotationIntensity={0} floatIntensity={reduced ? 0 : 0.8}>
+        <Emblem variant={variant} still={reduced} />
       </Float>
-      <Sparkles count={80} scale={[7, 4.5, 3]} size={2.4} speed={reduced ? 0 : 0.35} color="#F3D98B" opacity={0.85} />
+      {settings.sparkles > 0 && (
+        <Sparkles count={settings.sparkles} scale={[7, 4.5, 3]} size={2.4} speed={reduced ? 0 : 0.35} color="#F3D98B" opacity={0.85} />
+      )}
       <Environment resolution={256} frames={1}>
         <Lightformer form="rect" intensity={3} position={[0, 3, 2]} scale={[7, 1.4, 1]} color="#fff4d6" />
         <Lightformer form="rect" intensity={2.2} position={[-4, 0.5, 1]} rotation-y={Math.PI / 2} scale={[4, 1, 1]} color="#ffe7a3" />
