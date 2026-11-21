@@ -1,103 +1,115 @@
 # Content Engine: architecture
 
-A personal pipeline that finds what Nigerian social media is talking about, writes short scripts in the Golden Gist
-style, checks every factual claim against sources, voices the script in a cloned voice, renders a vertical video and
-hands it to a human for approval. Nothing is posted without that approval.
+A pipeline that finds what Nigerian social media is talking about, writes short scripts in the Golden Gist style, checks
+every factual claim against sources, voices the script in a cloned voice, renders a vertical video and hands it to a
+human for approval on Telegram or the web dashboard. Nothing is posted without that approval; posting itself is manual.
 
-The engine is generic; **Golden Gist by Tolugold** is its first brand.
+The engine is generic; **Golden Gist by Tolugold** is its first brand (`packages/core/src/settings.ts`).
 
-## Decisions
-
-| Area | Choice | Why |
-|---|---|---|
-| Language | TypeScript everywhere (pnpm monorepo) | Remotion needs Node; one set of types shared by workers, bot and dashboard |
-| Orchestration | Inngest (durable workflows) | The pipeline pauses for hours waiting for a human. `waitForEvent`, `sleepUntil`, retries and concurrency limits come built in |
-| Database | Supabase Postgres | Relational data, Realtime for the dashboard, pgvector later for "covered this already?" |
-| LLM | Claude: Haiku 5.5 for bulk triage, Opus 5.5 for scripts and the claim checker | Cheap where volume is high, strong where quality matters. Structured outputs on every call, prompt caching on the brand prompt |
-| Voice | ElevenLabs, cloned voice, `with-timestamps` endpoint | Character timings drive word-by-word captions without a transcription step |
-| Video | Remotion + FFmpeg, one template per tone | Branded, repeatable, near-zero marginal cost |
-| Review | Telegram bot **and** web dashboard | Telegram for speed on the phone, dashboard for watching, downloading and history |
-| Publishing | Manual, from a posting kit | No platform audits needed; trending sounds and AI labels added by hand |
-| Storage | Cloudflare R2 | No egress fees; signed download links |
-| Observability | Langfuse traces + `llm_calls` table | Cost per video, latency per stage, prompt versions |
-
-## Pipeline
+## Components
 
 ```mermaid
 flowchart LR
-  A[Trend scan\nhourly] --> B[Cluster + score\nHaiku]
-  B --> C[Pull reactions\nX API]
-  C --> D[Script + claim list\nOpus]
-  D --> E{Claim check\njudge model}
-  E -- unsupported --> D
-  E -- supported --> F[Voice\nElevenLabs]
-  F --> G[Render\nRemotion]
-  G --> H((draft/ready))
-  H --> T[Telegram bot]
-  H --> W[Dashboard]
-  T --> R((draft/reviewed))
-  W --> R
-  R --> K[Posting kit]
-  K --> P[You post\nand paste links]
-  P --> M[Metrics at +24h / +72h]
-  M -. feedback .-> B
+  subgraph Sources
+    X[X trends + search]
+    GT[Google Trends NG]
+    YT[YouTube popular NG]
+    RSS[News feeds]
+    FX[Fixtures]
+  end
+  Sources --> Scout
+  subgraph Worker["apps/worker (Inngest functions)"]
+    Scout[trend-scout] -->|story/selected| Produce[produce-draft]
+    Produce -->|draft/ready| Notify[notify-draft-ready]
+    Produce -->|draft/ready| Remind[review-reminder]
+    Sync[sync-review-decision]
+    PostRemind[posting-reminder]
+    Track[track-metrics]
+    Shot[read-analytics-screenshot]
+  end
+  Produce --> Claude[(Claude)]
+  Produce --> Eleven[(ElevenLabs)]
+  Produce --> R2[(R2)]
+  Notify --> TG[Telegram]
+  TG -->|webhook| Web
+  Web["apps/web (dashboard + REST API)"] -->|draft/reviewed, draft/posted| Sync & PostRemind & Track
+  Web & Worker --> DB[(Supabase Postgres)]
 ```
+
+| Package             | Responsibility                                                                                 |
+| ------------------- | ---------------------------------------------------------------------------------------------- |
+| `packages/core`     | Domain types (zod), review rules, platform limits, settings, pricing, insights. No I/O.        |
+| `packages/config`   | Validated environment; per-feature key checks with clear errors                                |
+| `packages/db`       | `Repository` contract with Supabase and in-memory implementations; sample data                 |
+| `packages/services` | Inngest client, typed events, review service shared by web and bot                             |
+| `packages/telegram` | Bot API client, message builders, update handler, webhook/poll scripts                         |
+| `packages/ai`       | Claude tasks: triage, reactions, research (web search), writer, claim judge, screenshot reader |
+| `packages/sources`  | Trend source adapters, reactions search, X/YouTube metrics                                     |
+| `packages/media`    | R2 storage, ElevenLabs voice with timestamps, narration timing                                 |
+| `packages/video`    | Remotion templates (one composition themed per tone) and render functions                      |
+| `apps/worker`       | Inngest functions + HTTP server; renders videos                                                |
+| `apps/web`          | Dashboard, REST API, Telegram webhook, media links                                             |
+| `evals`             | Golden set, graders and runner for prompt regressions                                          |
+
+## Pipeline (`produce-draft`)
+
+1. **Save trend** with the scout's news items as evidence (every later cost is tied to this trend).
+2. **Pull reactions** from X search; **analyse** them with Haiku: mood, tone, top takes, refined score, angle.
+3. **Research** with Claude's web search; each cited passage becomes evidence (URL, outlet, snippet).
+4. **Write** the script (Opus, structured output): scenes, captions per platform, hashtags, question, claims with evidence IDs.
+5. **Check claims.** Status is computed from evidence (2+ outlets confirmed, 1 reported, 0 chatter); the judge checks
+   support and wording. One revision with the judge's issues; if it still fails, the draft is stored as _failed_ and never voiced.
+6. **Voice** the narration (scenes + outro) in one ElevenLabs call with character timings.
+7. **Render** the MP4 and still with Remotion, upload to R2, mark the draft _pending review_, emit `draft/ready`.
+
+Each step is retried on its own, so a render hiccup never re-runs (or re-bills) the writing steps.
 
 ## Two review channels, one source of truth
 
-You asked for the dashboard without losing Telegram, so both channels read and write the **same draft row**:
+- `draft/ready` always triggers the Telegram preview. The dashboard reads the same row and refreshes every 30 seconds.
+- Dashboard actions, the REST API and the Telegram handler all call `createReviewService()` (`packages/services`), which
+  validates with the shared rules in `packages/core/src/review.ts` and writes through one SQL function per action.
+- `reviews.draft_id` is a primary key and `review_draft()` locks the draft row, so when both channels answer at once
+  exactly one wins and the other gets "already approved/rejected".
+- `draft/reviewed` updates the Telegram preview, sends the posting kit and schedules a posting-time reminder.
 
-1. When a render finishes, the pipeline emits `draft/ready`. The Telegram bot **always** sends the preview with
-   Approve / Edit / Reject buttons; the dashboard shows the same draft live. The dashboard is an extra consumer, never a
-   replacement.
-2. A decision from either channel goes through the same rules in `packages/core/src/review.ts`
-   (`applyReview`, `editCaption`, `markPosted`).
-3. The `reviews` table has `draft_id` as its primary key, so if you tap Approve on Telegram and click Reject on the web in
-   the same second, exactly one insert wins. The other channel gets a `ReviewConflictError` and shows the existing
-   decision.
-4. The winner emits `draft/reviewed`. The paused Inngest workflow resumes, the Telegram message is edited
-   ("Approved on the dashboard · 10:42"), and the dashboard refreshes.
+## REST API (behind the dashboard password)
 
-Event names and payloads live in `packages/core/src/events.ts`.
+| Method | Path                                  | Result                                                                             |
+| ------ | ------------------------------------- | ---------------------------------------------------------------------------------- |
+| GET    | `/api/drafts?status=&tone=&q=&limit=` | Drafts, newest first                                                               |
+| GET    | `/api/drafts/:id`                     | One draft with claims, evidence, review, posts, metrics, timeline                  |
+| POST   | `/api/drafts/:id/review`              | `{decision:"approved"}` or `{decision:"rejected", reason}`; 409 if already decided |
+| PUT    | `/api/drafts/:id/captions/:platform`  | `{text}`; idempotent; 422 over the platform limit                                  |
+| PUT    | `/api/drafts/:id/posts/:platform`     | `{url}`; idempotent per platform                                                   |
+| GET    | `/api/drafts/:id/media/:kind`         | Video or still via a signed link; `?download=1` to save                            |
+| POST   | `/api/scans`                          | 202, asks the scout to run now                                                     |
+| GET    | `/api/health`                         | Which integrations are configured (public)                                         |
+| POST   | `/api/telegram/webhook`               | Telegram updates (secret-token verified)                                           |
 
-## Claim ledger (fact-checking)
+Errors use RFC 9457 problem details (`{type, title, status, detail}`).
 
-Every script comes with a list of factual claims. Each claim has:
+## Data model
 
-- a **status**: `confirmed` (2+ independent outlets), `reported` (1 outlet) or `chatter` (social posts only);
-- the **evidence** it rests on;
-- a **verdict** from a separate judge call: `supported`, `misframed` or `unsupported`.
+`supabase/migrations/20261121000000_init.sql`: `trends`, `evidence`, `drafts`, `claims`, `reviews`, `edits`, `posts`,
+`metrics`, `pipeline_events`, `usage`, `telegram_sessions`, `source_health`, plus the transactional functions
+`create_draft`, `transition_draft`, `review_draft`, `edit_caption`, `record_post`. RLS is on everywhere; only the
+server-side service role reads or writes.
 
-Wording rules per status: confirmed can be stated as fact, reported must name the outlet, chatter must be framed as a
-claim ("X is saying..."). Approval is locked while any claim is not `supported`. Serious news always waits for a
-human, whatever the verdicts.
+## Observability and cost
 
-## Repository layout
+Every paid call (Claude tokens and web searches, ElevenLabs characters, X reads) is written to `usage` with its trend,
+stage, model and prompt version. The Insights page shows spend by stage, cost per posted video, first-pass approval
+rate, your edits (feedback for prompt tuning) and predicted virality against actual views. Inngest's UI shows each run
+step by step.
 
-```
-apps/web/            Next.js dashboard (Studio, Review queue, Library, draft detail, downloads)
-packages/core/       Shared schemas (zod), review rules, platform limits, event contract
-supabase/migrations/ Database schema
-docs/                This document
-```
+## Decisions worth knowing
 
-Planned next to these: `apps/worker` (Inngest functions), `apps/bot` (Telegram), `packages/video` (Remotion
-templates), `evals/` (golden set + graders).
-
-## Status
-
-| Piece | State |
-|---|---|
-| Dashboard UI, review rules, schema | Built, running on sample data |
-| Supabase data layer | Next: swap `apps/web/lib/store.ts` to Supabase (signatures stay the same) |
-| Telegram bot | Next: consumes `draft/ready`, writes through the same review rules |
-| Trend scout, script writer, claim checker | Next |
-| Voice + Remotion templates | Next |
-| Evals in CI | Next |
-
-## Portfolio metrics to track from day one
-
-- First-pass approval rate (approved with no edits); shown on the Studio page
-- Cost per published video (`llm_calls` + voice + X data)
-- Predicted virality vs. actual views (calibration)
-- Eval pass rate per prompt version
+| Decision                                        | Why                                                                                            |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Workflow, not an autonomous agent               | Fixed steps are cheaper, testable and predictable; only research uses a tool loop (web search) |
+| Claim status computed in code                   | "Confirmed" must mean two outlets, not the model's opinion                                     |
+| Manual posting with a posting kit               | No platform audits; trending sounds and AI labels added by hand                                |
+| Usage table instead of an external LLM-ops tool | One less service and key; cost per video comes from the same database                          |
+| One Remotion composition themed per tone        | Three templates without three copies of the code                                               |
+| Self-hosted Inngest                             | Durable waits (review, posting time, 24/72h metrics) with no extra account                     |

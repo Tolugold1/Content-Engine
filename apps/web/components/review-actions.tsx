@@ -4,12 +4,7 @@ import { Check, X } from "lucide-react";
 import { useState, useTransition } from "react";
 import { approveDraftAction, rejectDraftAction, type ActionResult } from "@/app/drafts/[id]/actions";
 
-const QUICK_REASONS = [
-  "Only chatter, can't confirm",
-  "Story is already old",
-  "Tone is off",
-  "Not for our audience",
-];
+import { QUICK_REJECT_REASONS } from "@content-engine/core";
 
 export function ReviewActions({ draftId, blocked }: { draftId: string; blocked: boolean }) {
   const [pending, startTransition] = useTransition();
@@ -43,9 +38,7 @@ export function ReviewActions({ draftId, blocked }: { draftId: string; blocked: 
           Reject
         </button>
       </div>
-      {blocked && (
-        <p className="mt-3 text-sm text-warn">Approval is locked until every claim is supported by evidence.</p>
-      )}
+      {blocked && <p className="mt-3 text-sm text-warn">Approval is locked until every claim is supported by evidence.</p>}
 
       {rejecting && (
         <div className="mt-4 rounded-2xl border border-bad/25 bg-bad/5 p-4">
@@ -53,7 +46,7 @@ export function ReviewActions({ draftId, blocked }: { draftId: string; blocked: 
             Why? <span className="text-muted">The writer learns from this.</span>
           </label>
           <div className="mt-3 flex flex-wrap gap-2">
-            {QUICK_REASONS.map((quick) => (
+            {QUICK_REJECT_REASONS.map((quick) => (
               <button
                 key={quick}
                 type="button"

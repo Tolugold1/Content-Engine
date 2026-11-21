@@ -1,18 +1,20 @@
 import type { Draft } from "@content-engine/core";
+import { mediaUrl } from "@/lib/media";
 import { DraftPoster } from "./draft-card";
 
 /** The finished video in a tilted 3D phone; it straightens when you hover or play. */
 export function PhoneFrame({ draft }: { draft: Draft }) {
+  const video = mediaUrl(draft, "video");
   return (
     <div className="phone-stage mx-auto w-full max-w-[230px] sm:max-w-[320px]">
       <div className="phone">
         <div className="phone-screen">
           <span className="phone-notch" aria-hidden />
-          {draft.videoUrl ? (
+          {video ? (
             <video
-              key={draft.videoUrl}
-              src={draft.videoUrl}
-              poster={draft.stillUrl ?? undefined}
+              key={video}
+              src={video}
+              poster={mediaUrl(draft, "still") ?? undefined}
               controls
               playsInline
               preload="metadata"

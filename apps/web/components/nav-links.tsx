@@ -1,6 +1,6 @@
 "use client";
 
-import { Film, Inbox, LayoutDashboard } from "lucide-react";
+import { BarChart3, Film, Inbox, LayoutDashboard } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -8,6 +8,7 @@ const LINKS = [
   { href: "/", label: "Studio", icon: LayoutDashboard },
   { href: "/review", label: "Review", icon: Inbox },
   { href: "/library", label: "Library", icon: Film },
+  { href: "/insights", label: "Insights", icon: BarChart3 },
 ] as const;
 
 export function NavLinks({ pendingCount }: { pendingCount: number }) {

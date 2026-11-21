@@ -8,8 +8,30 @@
   },
   "scripts": {
     "dev": "pnpm --filter @content-engine/web dev",
+    "dev:worker": "pnpm --filter @content-engine/worker dev",
     "build": "pnpm --filter @content-engine/web build",
     "start": "pnpm --filter @content-engine/web start",
-    "typecheck": "pnpm -r typecheck"
-  }
+    "start:worker": "pnpm --filter @content-engine/worker start",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
+    "eval": "pnpm --filter @content-engine/evals eval",
+    "telegram:webhook": "pnpm --filter @content-engine/telegram webhook",
+    "telegram:poll": "pnpm --filter @content-engine/telegram poll"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.20.5",
+    "eslint": "^10.15.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "prettier": "^3.10.1",
+    "tsx": "^4.23.15",
+    "typescript": "5.9.3",
+    "typescript-eslint": "^8.73.0",
+    "vitest": "^5.1.1"
+  },
+  "type": "module"
 }

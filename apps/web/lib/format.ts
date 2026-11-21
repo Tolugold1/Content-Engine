@@ -1,6 +1,6 @@
-import type { Draft, DraftStatus } from "@content-engine/core";
+import { SCHEDULE, type DraftStatus } from "@content-engine/core";
 
-export const TIME_ZONE = process.env.DASHBOARD_TIMEZONE ?? "Africa/Lagos";
+export const TIME_ZONE = process.env.DASHBOARD_TIMEZONE || SCHEDULE.timezone;
 
 export function timeAgo(iso: string, now = Date.now()): string {
   const diff = now - new Date(iso).getTime();
@@ -37,9 +37,7 @@ export function dayLabel(iso: string, now = Date.now()): string {
   const key = dayKey(new Date(iso));
   if (key === dayKey(new Date(now))) return "Today";
   if (key === dayKey(new Date(now - 86_400_000))) return "Yesterday";
-  return new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: TIME_ZONE }).format(
-    new Date(iso),
-  );
+  return new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: TIME_ZONE }).format(new Date(iso));
 }
 
 export function formatUsd(value: number): string {
@@ -48,10 +46,6 @@ export function formatUsd(value: number): string {
 
 export function compactNumber(value: number): string {
   return new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(value);
-}
-
-export function totalViews(draft: Draft): number {
-  return draft.metrics.reduce((sum, metric) => sum + metric.views, 0);
 }
 
 export function formatDuration(seconds: number): string {

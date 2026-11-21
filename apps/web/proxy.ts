@@ -30,5 +30,6 @@ function timingSafeEqual(a: string, b: string): boolean {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // The Telegram webhook has its own secret token; health checks stay open for uptime monitors.
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/telegram/webhook|api/health).*)"],
 };

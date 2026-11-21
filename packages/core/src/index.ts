@@ -3,3 +3,7 @@ export * from "./platforms";
 export * from "./review";
 export * from "./events";
 export * from "./templates";
+export * from "./settings";
+export * from "./utils";
+export * from "./pricing";
+export * from "./insights";

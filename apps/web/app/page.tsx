@@ -1,15 +1,20 @@
-import { firstPassApprovalRate } from "@content-engine/core";
+import { isConfigured } from "@content-engine/config";
+import { firstPassApprovalRate, latestViews } from "@content-engine/core";
 import { ArrowRight, BadgeCheck, CircleDollarSign, Inbox, Radio, Send, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { DraftCard } from "@/components/draft-card";
 import { HeroCanvas } from "@/components/hero-canvas";
 import { StatTile } from "@/components/stat-tile";
-import { compactNumber, formatUsd, timeAgo, totalViews } from "@/lib/format";
-import { getPipelineStatus, listDrafts } from "@/lib/store";
+import { AutoRefresh } from "@/components/auto-refresh";
+import { ScanButton } from "@/components/scan-button";
+import { compactNumber, formatUsd, timeAgo } from "@/lib/format";
+import { getSourceHealth, listDrafts } from "@/lib/data";
 
 export default async function StudioPage() {
-  const [drafts, pipeline] = await Promise.all([listDrafts(), getPipelineStatus()]);
+  const [drafts, sources] = await Promise.all([listDrafts(), getSourceHealth()]);
   const now = Date.now();
+  const lastScan = sources.reduce<string | null>((latest, s) => (!latest || s.checkedAt > latest ? s.checkedAt : latest), null);
+  const telegramConnected = isConfigured("telegram");
 
   const pending = drafts.filter((d) => d.status === "pending_review");
   const rendering = drafts.filter((d) => d.status === "rendering");
@@ -17,13 +22,14 @@ export default async function StudioPage() {
   const posted = drafts.filter((d) => d.status === "posted");
   const weekAgo = now - 7 * 86_400_000;
   const postedThisWeek = posted.filter((d) => d.posts.some((p) => new Date(p.postedAt).getTime() > weekAgo));
-  const weekViews = postedThisWeek.reduce((sum, d) => sum + totalViews(d), 0);
+  const weekViews = postedThisWeek.reduce((sum, d) => sum + latestViews(d), 0);
   const firstPass = firstPassApprovalRate(drafts);
   const monthStart = new Date(new Date(now).getFullYear(), new Date(now).getMonth(), 1).getTime();
   const spend = drafts.filter((d) => new Date(d.createdAt).getTime() >= monthStart).reduce((sum, d) => sum + d.costUsd, 0);
 
   return (
     <div className="space-y-12 pt-6 sm:pt-10">
+      <AutoRefresh />
       {/* Hero */}
       <section className="glass relative overflow-hidden rounded-[32px]">
         <div className="floor-grid" aria-hidden />
@@ -50,12 +56,13 @@ export default async function StudioPage() {
                 <ArrowRight className="h-4 w-4" aria-hidden />
               </Link>
             </div>
-            <p className="mt-6 inline-flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
-              <Radio className="h-3.5 w-3.5 text-ok" aria-hidden />
-              Last trend scan {timeAgo(pipeline.lastScanAt, now)}
-              <span aria-hidden>·</span>
-              next {timeAgo(pipeline.nextScanAt, now)}
-            </p>
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              <p className="inline-flex items-center gap-2 text-xs text-muted">
+                <Radio className={`h-3.5 w-3.5 ${lastScan ? "text-ok" : "text-faint"}`} aria-hidden />
+                {lastScan ? `Last trend scan ${timeAgo(lastScan, now)}` : "No trend scan yet"}
+              </p>
+              <ScanButton />
+            </div>
           </div>
           <div className="relative -mx-6 h-[280px] sm:mx-0 sm:h-[400px]">
             <div className="absolute inset-x-10 bottom-6 h-16 rounded-[50%] bg-gold/20 blur-3xl" aria-hidden />
@@ -120,14 +127,19 @@ export default async function StudioPage() {
       <section className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
         <div className="glass rounded-[24px] p-5 sm:p-6">
           <h2 className="font-display text-lg font-bold text-white">Trend sources</h2>
+          {sources.length === 0 && (
+            <p className="mt-4 text-sm text-muted">No scans yet. Press “Scan now” or wait for the next scheduled run.</p>
+          )}
           <ul className="mt-4 divide-y divide-white/5">
-            {pipeline.sources.map((source) => (
+            {sources.map((source) => (
               <li key={source.name} className="flex items-center justify-between py-2.5 text-sm">
                 <span className="flex items-center gap-2.5">
                   <span className={`h-2 w-2 rounded-full ${source.ok ? "bg-ok" : "bg-bad"}`} aria-hidden />
                   <span className="text-cream">{source.name}</span>
                 </span>
-                <span className="text-xs text-muted">{source.note}</span>
+                <span className="max-w-[55%] truncate text-right text-xs text-muted" title={source.note}>
+                  {source.note} · {timeAgo(source.checkedAt, now)}
+                </span>
               </li>
             ))}
           </ul>
@@ -140,11 +152,11 @@ export default async function StudioPage() {
             <h2 className="font-display text-lg font-bold text-white">Telegram stays on</h2>
           </div>
           <p className="mt-3 text-sm leading-relaxed text-muted">
-            Every finished video still goes to Telegram with Approve, Edit and Reject buttons. This dashboard reads the same
-            drafts, so a decision in one place shows up in the other, and the first decision wins.
+            Every finished video still goes to Telegram with Approve, Edit and Reject buttons. This dashboard reads the same drafts, so a
+            decision in one place shows up in the other, and the first decision wins.
           </p>
-          <p className={`mt-4 text-sm font-medium ${pipeline.telegramConnected ? "text-ok" : "text-warn"}`}>
-            {pipeline.telegramConnected ? "Bot connected" : "Bot not connected yet: set TELEGRAM_BOT_TOKEN"}
+          <p className={`mt-4 text-sm font-medium ${telegramConnected ? "text-ok" : "text-warn"}`}>
+            {telegramConnected ? "Bot connected" : "Bot not connected yet: add the Telegram keys (docs/SETUP.md)"}
           </p>
         </div>
       </section>

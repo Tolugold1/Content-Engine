@@ -1,4 +1,12 @@
-import { PLATFORM_INFO, TEMPLATE_BY_TONE, type ClaimStatus, type DraftStatus, type JudgeVerdict, type Platform, type Tone } from "@content-engine/core";
+import {
+  PLATFORM_INFO,
+  TEMPLATE_BY_TONE,
+  type ClaimStatus,
+  type DraftStatus,
+  type JudgeVerdict,
+  type Platform,
+  type Tone,
+} from "@content-engine/core";
 import { STATUS_LABEL } from "@/lib/format";
 
 const STATUS_STYLE: Record<DraftStatus, string> = {

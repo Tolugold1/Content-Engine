@@ -1,0 +1,52 @@
+# Production stack for one VPS: `docker compose up -d --build`
+# Needs a filled-in .env (see docs/SETUP.md) and DOMAIN pointing at the server.
+services:
+  web:
+    build: { context: ., target: web }
+    env_file: .env
+    environment:
+      INNGEST_BASE_URL: http://inngest:8288
+    depends_on: [inngest]
+    restart: unless-stopped
+
+  worker:
+    build: { context: ., target: worker }
+    env_file: .env
+    environment:
+      INNGEST_BASE_URL: http://inngest:8288
+    shm_size: 1gb # headless Chrome needs shared memory to render
+    depends_on: [inngest]
+    restart: unless-stopped
+
+  # Self-hosted Inngest: runs the workflows, retries, waits and schedules. Data persists in SQLite.
+  inngest:
+    image: inngest/inngest:latest
+    command: >
+      inngest start
+      --event-key ${INNGEST_EVENT_KEY}
+      --signing-key ${INNGEST_SIGNING_KEY}
+      --sdk-url http://worker:3001/api/inngest
+      --sqlite-dir /data
+    volumes:
+      - inngest-data:/data
+    ports:
+      - "127.0.0.1:8288:8288" # dashboard via SSH tunnel only
+    restart: unless-stopped
+
+  # HTTPS for the dashboard and the Telegram webhook (automatic certificates).
+  caddy:
+    image: caddy:2
+    ports: ["80:80", "443:443"]
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on: [web]
+    restart: unless-stopped
+
+volumes:
+  inngest-data:
+  caddy-data:
+  caddy-config:

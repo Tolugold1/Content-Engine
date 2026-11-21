@@ -19,14 +19,7 @@ export type Category = z.infer<typeof Category>;
 export const Mood = z.enum(["jokes", "debate", "outrage", "hype", "sad"]);
 export type Mood = z.infer<typeof Mood>;
 
-export const DraftStatus = z.enum([
-  "rendering",
-  "pending_review",
-  "approved",
-  "rejected",
-  "posted",
-  "failed",
-]);
+export const DraftStatus = z.enum(["rendering", "pending_review", "approved", "rejected", "posted", "failed"]);
 export type DraftStatus = z.infer<typeof DraftStatus>;
 
 /** confirmed = 2+ independent outlets, reported = 1 outlet, chatter = social posts only. */
@@ -42,6 +35,8 @@ export const Evidence = z.object({
   outlet: z.string(),
   title: z.string(),
   url: z.string(),
+  /** The passage that supports claims (from a web search citation or feed summary). */
+  snippet: z.string().optional(),
   fetchedAt: z.string(),
 });
 export type Evidence = z.infer<typeof Evidence>;
@@ -139,6 +134,14 @@ export const TimelineEvent = z.object({
 });
 export type TimelineEvent = z.infer<typeof TimelineEvent>;
 
+/** Storage keys (R2), or "sample:" keys in sample mode. The app turns keys into URLs. */
+export const DraftMedia = z.object({
+  video: z.string().nullable(),
+  still: z.string().nullable(),
+  audio: z.string().nullable(),
+});
+export type DraftMedia = z.infer<typeof DraftMedia>;
+
 export const Captions = z.object({
   tiktok: z.string(),
   instagram: z.string(),
@@ -165,8 +168,7 @@ export const Draft = z.object({
   claims: z.array(Claim),
   evidence: z.array(Evidence),
   durationSec: z.number().positive(),
-  videoUrl: z.string().nullable(),
-  stillUrl: z.string().nullable(),
+  media: DraftMedia,
   costUsd: z.number().nonnegative(),
   telegram: z.object({ chatId: z.string(), messageId: z.number().int() }).nullable(),
   review: Review.nullable(),
@@ -176,3 +178,69 @@ export const Draft = z.object({
   timeline: z.array(TimelineEvent),
 });
 export type Draft = z.infer<typeof Draft>;
+
+/** A raw item from any trend source, before clustering. */
+export const RawItem = z.object({
+  source: z.string(),
+  kind: z.enum(["trend", "news", "video", "fixture"]),
+  title: z.string(),
+  url: z.string().optional(),
+  summary: z.string().optional(),
+  publishedAt: z.string().optional(),
+  volume: z.number().optional(),
+});
+export type RawItem = z.infer<typeof RawItem>;
+
+/** A post reacting to a story (from X search). */
+export const Reaction = z.object({
+  text: z.string(),
+  likes: z.number(),
+  reposts: z.number(),
+  replies: z.number(),
+  url: z.string(),
+});
+export type Reaction = z.infer<typeof Reaction>;
+
+/** Input for a new draft; ids, review state and history are created by the repository. */
+export type NewDraft = Omit<
+  Draft,
+  "id" | "createdAt" | "trend" | "evidence" | "review" | "edits" | "posts" | "metrics" | "timeline" | "telegram"
+> & { trendId: string; timeline?: TimelineEvent[] };
+
+export const ChatAction = z.enum(["reject_reason", "edit_caption", "post_link", "metrics_screenshot"]);
+export type ChatAction = z.infer<typeof ChatAction>;
+
+/** What the Telegram bot is waiting for in a chat (a reason, a caption, a link or a screenshot). */
+export const ChatSession = z.object({
+  chatId: z.string(),
+  action: ChatAction,
+  draftId: z.string(),
+  platform: Platform.nullable(),
+  expiresAt: z.string(),
+});
+export type ChatSession = z.infer<typeof ChatSession>;
+
+/** One paid API call (Claude, ElevenLabs or X), tied to the trend it was made for. */
+export const UsageRecord = z.object({
+  trendId: z.string().nullable(),
+  provider: z.enum(["anthropic", "elevenlabs", "x"]),
+  stage: z.string(),
+  model: z.string(),
+  promptVersion: z.string().nullable(),
+  inputTokens: z.number().int(),
+  outputTokens: z.number().int(),
+  cacheReadTokens: z.number().int(),
+  cacheWriteTokens: z.number().int(),
+  units: z.number(),
+  costUsd: z.number(),
+  latencyMs: z.number().int(),
+});
+export type UsageRecord = z.infer<typeof UsageRecord>;
+
+export const SourceHealth = z.object({
+  name: z.string(),
+  ok: z.boolean(),
+  note: z.string(),
+  checkedAt: z.string(),
+});
+export type SourceHealth = z.infer<typeof SourceHealth>;

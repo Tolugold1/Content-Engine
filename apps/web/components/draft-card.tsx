@@ -1,20 +1,14 @@
-import type { Draft } from "@content-engine/core";
+import { latestViews, type Draft } from "@content-engine/core";
 import { Download, Eye, Flame } from "lucide-react";
 import Link from "next/link";
-import { compactNumber, formatDuration, timeAgo, totalViews } from "@/lib/format";
+import { compactNumber, formatDuration, timeAgo } from "@/lib/format";
+import { mediaUrl } from "@/lib/media";
 import { PlatformPill, StatusBadge, ToneChip } from "./badges";
 import { TiltCard } from "./tilt-card";
 
-export function DraftPoster({
-  draft,
-  className = "",
-  aspect = "aspect-[9/16]",
-}: {
-  draft: Draft;
-  className?: string;
-  aspect?: string;
-}) {
-  if (!draft.stillUrl) {
+export function DraftPoster({ draft, className = "", aspect = "aspect-[9/16]" }: { draft: Draft; className?: string; aspect?: string }) {
+  const still = mediaUrl(draft, "still");
+  if (!still) {
     return (
       <div className={`shimmer grid place-items-center rounded-[18px] border border-line ${aspect} ${className}`}>
         <div className="px-4 text-center">
@@ -28,9 +22,8 @@ export function DraftPoster({
     );
   }
   return (
-    // eslint-disable-next-line @next/next/no-img-element -- generated SVG still from our own API
     <img
-      src={draft.stillUrl}
+      src={still}
       alt={`Still for ${draft.title}`}
       loading="lazy"
       decoding="async"
@@ -40,8 +33,8 @@ export function DraftPoster({
 }
 
 export function DraftCard({ draft, index = 0 }: { draft: Draft; index?: number }) {
-  const views = totalViews(draft);
-  const canDownload = Boolean(draft.videoUrl);
+  const views = latestViews(draft);
+  const download = mediaUrl(draft, "video", true);
 
   return (
     <div className="rise" style={{ animationDelay: `${Math.min(index, 8) * 60}ms` }}>
@@ -86,9 +79,9 @@ export function DraftCard({ draft, index = 0 }: { draft: Draft; index?: number }
               </span>
             )}
           </div>
-          {canDownload && (
+          {download && (
             <a
-              href={`/api/drafts/${draft.id}/download`}
+              href={download}
               className="btn btn-ghost btn-sm !min-h-8 !px-2"
               aria-label={`Download video for ${draft.title}`}
               title="Download MP4"

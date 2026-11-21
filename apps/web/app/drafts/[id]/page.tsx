@@ -1,4 +1,13 @@
-import { blockingClaims, channelLabel, PLATFORM_INFO, PLATFORMS, TEMPLATE_BY_TONE, type Draft } from "@content-engine/core";
+import {
+  POSTING_CHECKLIST,
+  blockingClaims,
+  channelLabel,
+  latestMetrics,
+  PLATFORM_INFO,
+  PLATFORMS,
+  TEMPLATE_BY_TONE,
+  type Draft,
+} from "@content-engine/core";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -22,12 +31,13 @@ import { MarkPosted } from "@/components/mark-posted";
 import { PhoneFrame } from "@/components/phone-frame";
 import { ReviewActions } from "@/components/review-actions";
 import { compactNumber, formatClock, formatDateTime, formatDuration, formatUsd, timeAgo } from "@/lib/format";
-import { findDraft, getDraft } from "@/lib/store";
+import { getDraft } from "@/lib/data";
+import { mediaUrl } from "@/lib/media";
 
 type Params = Promise<{ id: string }>;
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
-  const draft = findDraft((await params).id);
+  const draft = await getDraft((await params).id);
   return { title: draft?.title ?? "Draft" };
 }
 
@@ -36,7 +46,9 @@ export default async function DraftPage({ params }: { params: Params }) {
   if (!draft) notFound();
 
   const blocked = blockingClaims(draft);
-  const hasRender = Boolean(draft.videoUrl);
+  const videoDownload = mediaUrl(draft, "video", true);
+  const stillDownload = mediaUrl(draft, "still", true);
+  const hasRender = Boolean(videoDownload);
   const captionsEditable = draft.status === "pending_review" || draft.status === "approved";
   const telegramSent = draft.timeline.find((event) => event.stage === "notified_telegram");
 
@@ -54,11 +66,11 @@ export default async function DraftPage({ params }: { params: Params }) {
           <div className="mt-6 grid grid-cols-2 gap-3">
             {hasRender ? (
               <>
-                <a href={`/api/drafts/${draft.id}/download`} className="btn btn-gold">
+                <a href={videoDownload ?? undefined} className="btn btn-gold">
                   <Download className="h-4 w-4" aria-hidden />
                   MP4
                 </a>
-                <a href={`/api/drafts/${draft.id}/download?kind=still`} className="btn btn-ghost">
+                <a href={stillDownload ?? undefined} className="btn btn-ghost">
                   <ImageDown className="h-4 w-4" aria-hidden />
                   Still
                 </a>
@@ -119,9 +131,9 @@ export default async function DraftPage({ params }: { params: Params }) {
               <div className="mt-4 rounded-2xl border border-gold/20 bg-gold/5 p-4 text-sm text-cream/90">
                 <p className="font-semibold text-gold-light">Before you post</p>
                 <ul className="mt-2 list-disc space-y-1 pl-5 text-muted">
-                  <li>Upload the MP4 from here, not a re-download from another app (watermarks get Reels buried).</li>
-                  <li>Switch on each app&apos;s AI-generated content label (cloned voice).</li>
-                  <li>On TikTok, add a trending sound at low volume.</li>
+                  {POSTING_CHECKLIST.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
                   <li>Pin the question as the first comment: &ldquo;{draft.engagementQuestion}&rdquo;</li>
                 </ul>
               </div>
@@ -137,7 +149,7 @@ export default async function DraftPage({ params }: { params: Params }) {
           {draft.metrics.length > 0 && (
             <Panel title="Performance">
               <div className="grid gap-3 sm:grid-cols-3">
-                {draft.metrics.map((metric) => (
+                {latestMetrics(draft).map((metric) => (
                   <div key={metric.platform} className="rounded-2xl border border-white/8 bg-black/30 p-4">
                     <div className="flex items-center justify-between">
                       <PlatformPill platform={metric.platform} />
@@ -146,7 +158,8 @@ export default async function DraftPage({ params }: { params: Params }) {
                     <p className="mt-3 font-display text-3xl font-bold tabular-nums text-white">{compactNumber(metric.views)}</p>
                     <p className="text-xs text-muted">views</p>
                     <p className="mt-2 text-xs text-muted">
-                      {compactNumber(metric.likes)} likes · {compactNumber(metric.comments)} comments · {compactNumber(metric.shares)} shares
+                      {compactNumber(metric.likes)} likes · {compactNumber(metric.comments)} comments · {compactNumber(metric.shares)}{" "}
+                      shares
                     </p>
                   </div>
                 ))}
@@ -196,7 +209,10 @@ export default async function DraftPage({ params }: { params: Params }) {
                 {draft.claims.map((claim) => {
                   const ok = claim.verdict === "supported";
                   return (
-                    <li key={claim.id} className={`rounded-2xl border p-4 ${ok ? "border-white/8 bg-black/25" : "border-warn/40 bg-warn/5"}`}>
+                    <li
+                      key={claim.id}
+                      className={`rounded-2xl border p-4 ${ok ? "border-white/8 bg-black/25" : "border-warn/40 bg-warn/5"}`}
+                    >
                       <div className="flex flex-wrap items-center gap-2">
                         <ClaimStatusPill status={claim.status} />
                         <span className={`inline-flex items-center gap-1 text-xs font-medium ${ok ? "text-ok" : "text-warn"}`}>

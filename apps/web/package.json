@@ -9,7 +9,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@content-engine/config": "workspace:*",
     "@content-engine/core": "workspace:*",
+    "@content-engine/db": "workspace:*",
+    "@content-engine/media": "workspace:*",
+    "@content-engine/services": "workspace:*",
+    "@content-engine/telegram": "workspace:*",
     "@fontsource-variable/bricolage-grotesque": "^5.3.0",
     "@fontsource-variable/inter": "^5.3.0",
     "@react-three/drei": "^10.7.9",

@@ -4,9 +4,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ToneChip } from "@/components/badges";
 import { DraftCard, DraftPoster } from "@/components/draft-card";
+import { AutoRefresh } from "@/components/auto-refresh";
 import { TiltCard } from "@/components/tilt-card";
 import { timeAgo } from "@/lib/format";
-import { listDrafts } from "@/lib/store";
+import { listDrafts } from "@/lib/data";
 
 export const metadata: Metadata = { title: "Review queue" };
 
@@ -19,6 +20,7 @@ export default async function ReviewPage() {
 
   return (
     <div className="space-y-12 pt-8 sm:pt-12">
+      <AutoRefresh />
       <header className="rise">
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-gold">Review queue</p>
         <h1 className="mt-2 font-display text-4xl font-extrabold tracking-tight text-white sm:text-5xl">

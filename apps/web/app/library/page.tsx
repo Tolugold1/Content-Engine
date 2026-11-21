@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { DraftCard } from "@/components/draft-card";
 import { dayLabel, STATUS_LABEL } from "@/lib/format";
-import { listDrafts } from "@/lib/store";
+import { listDrafts } from "@/lib/data";
 
 export const metadata: Metadata = { title: "Library" };
 

@@ -72,22 +72,14 @@ export function applyReview(draft: Draft, input: ReviewInput): Draft {
   };
 }
 
-export function editCaption(
-  draft: Draft,
-  platform: Platform,
-  text: string,
-  channel: ReviewChannel,
-  at = new Date().toISOString(),
-): Draft {
+export function editCaption(draft: Draft, platform: Platform, text: string, channel: ReviewChannel, at = new Date().toISOString()): Draft {
   if (!["pending_review", "approved"].includes(draft.status)) {
     throw new ReviewRuleError("Captions can only be edited before the draft is posted.");
   }
   const next = text.trim();
   if (!next) throw new ReviewRuleError("Caption cannot be empty.");
   if (!isCaptionWithinLimit(platform, next)) {
-    throw new ReviewRuleError(
-      `${PLATFORM_INFO[platform].label} allows ${PLATFORM_INFO[platform].captionLimit} characters.`,
-    );
+    throw new ReviewRuleError(`${PLATFORM_INFO[platform].label} allows ${PLATFORM_INFO[platform].captionLimit} characters.`);
   }
   const before = draft.captions[platform];
   if (before === next) return draft;
@@ -108,22 +100,13 @@ export function markPosted(
   platform: Platform,
   url: string,
   at = new Date().toISOString(),
+  via: "manual" | "api" = "manual",
 ): Draft {
   if (!["approved", "posted"].includes(draft.status)) {
     throw new ReviewRuleError("Approve the draft before marking it as posted.");
   }
-  let parsed: URL;
-  try {
-    parsed = new URL(url.trim());
-  } catch {
-    throw new ReviewRuleError("Paste the full link to the post.");
-  }
-  if (parsed.protocol !== "https:") throw new ReviewRuleError("Post links should start with https://");
-
-  const posts = [
-    ...draft.posts.filter((post) => post.platform !== platform),
-    { platform, url: parsed.toString(), postedAt: at, via: "manual" as const },
-  ];
+  const normalised = normalisePostUrl(url);
+  const posts = [...draft.posts.filter((post) => post.platform !== platform), { platform, url: normalised, postedAt: at, via }];
 
   return {
     ...draft,
@@ -143,4 +126,16 @@ export function firstPassApprovalRate(drafts: Draft[]): number | null {
 
 export function channelLabel(channel: ReviewChannel): string {
   return channel === "web" ? "the dashboard" : "Telegram";
+}
+
+/** Validates a pasted post link and returns it normalised. */
+export function normalisePostUrl(url: string): string {
+  let parsed: URL;
+  try {
+    parsed = new URL(url.trim());
+  } catch {
+    throw new ReviewRuleError("Paste the full link to the post.");
+  }
+  if (parsed.protocol !== "https:") throw new ReviewRuleError("Post links should start with https://");
+  return parsed.toString();
 }

@@ -1,17 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import { TiltCard } from "./tilt-card";
 
-export function StatTile({
-  label,
-  value,
-  hint,
-  icon: Icon,
-}: {
-  label: string;
-  value: string;
-  hint: string;
-  icon: LucideIcon;
-}) {
+export function StatTile({ label, value, hint, icon: Icon }: { label: string; value: string; hint: string; icon: LucideIcon }) {
   return (
     <TiltCard className="glass rounded-[22px] p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3">

@@ -1,0 +1,28 @@
+{
+  "name": "@content-engine/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@content-engine/ai": "workspace:*",
+    "@content-engine/config": "workspace:*",
+    "@content-engine/core": "workspace:*",
+    "@content-engine/db": "workspace:*",
+    "@content-engine/media": "workspace:*",
+    "@content-engine/services": "workspace:*",
+    "@content-engine/sources": "workspace:*",
+    "@content-engine/telegram": "workspace:*",
+    "@content-engine/video": "workspace:*",
+    "inngest": "^4.26.2",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@inngest/test": "^1.0.0"
+  }
+}
