@@ -1,0 +1,24 @@
+{
+  "name": "@content-engine/telegram",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run --passWithNoTests",
+    "webhook": "tsx scripts/set-webhook.ts",
+    "poll": "tsx scripts/poll.ts"
+  },
+  "dependencies": {
+    "@content-engine/config": "workspace:*",
+    "@content-engine/core": "workspace:*",
+    "@content-engine/db": "workspace:*",
+    "@content-engine/services": "workspace:*",
+    "zod": "^4.6.7"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "@content-engine/evals",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "eval": "tsx src/run.ts",
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@content-engine/ai": "workspace:*",
+    "@content-engine/config": "workspace:*",
+    "@content-engine/core": "workspace:*"
+  }
+}
