@@ -1,0 +1,15 @@
+{
+  "name": "content-engine",
+  "private": true,
+  "description": "Trend-to-short-video pipeline with human-in-the-loop review (Golden Gist by Tolugold).",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @content-engine/web dev",
+    "build": "pnpm --filter @content-engine/web build",
+    "start": "pnpm --filter @content-engine/web start",
+    "typecheck": "pnpm -r typecheck"
+  }
+}
