@@ -73,7 +73,7 @@ Each step is retried on its own, so a render hiccup never re-runs (or re-bills) 
   exactly one wins and the other gets "already approved/rejected".
 - `draft/reviewed` updates the Telegram preview, sends the posting kit and schedules a posting-time reminder.
 
-## REST API (behind the dashboard password)
+## REST API (owner session required)
 
 | Method | Path                                  | Result                                                                             |
 | ------ | ------------------------------------- | ---------------------------------------------------------------------------------- |
@@ -87,7 +87,15 @@ Each step is retried on its own, so a render hiccup never re-runs (or re-bills) 
 | GET    | `/api/health`                         | Which integrations are configured (public)                                         |
 | POST   | `/api/telegram/webhook`               | Telegram updates (secret-token verified)                                           |
 
-Errors use RFC 9457 problem details (`{type, title, status, detail}`).
+Errors use RFC 9457 problem details (`{type, title, status, detail}`). Without a session the API answers 401, and
+cross-site writes are refused with 403.
+
+## Authentication
+
+Single-owner sign-in on Supabase Auth. `OWNER_EMAIL` is the only account; it is created once through `/signup` with the
+server's `SIGNUP_CODE` (via the admin API, so public sign-ups stay disabled in Supabase), and sign-up then closes. The
+proxy (`apps/web/proxy.ts`) refreshes and verifies the session on every request; pages, server actions and API routes
+check it again (`apps/web/lib/auth`). The rules are pure functions with unit tests (`lib/auth/rules.ts`).
 
 ## Data model
 

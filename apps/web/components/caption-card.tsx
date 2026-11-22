@@ -3,7 +3,7 @@
 import { captionLength, PLATFORM_INFO, type Platform } from "@content-engine/core";
 import { Check, Copy, Pencil } from "lucide-react";
 import { useState, useTransition } from "react";
-import { saveCaptionAction } from "@/app/drafts/[id]/actions";
+import { saveCaptionAction } from "@/lib/actions";
 import { PlatformPill } from "./badges";
 
 export function CaptionCard({

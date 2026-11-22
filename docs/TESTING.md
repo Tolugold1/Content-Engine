@@ -4,7 +4,7 @@
 
 ```bash
 pnpm install
-pnpm check        # format, lint, typecheck, 46 unit and integration tests
+pnpm check        # format, lint, typecheck, 58 unit and integration tests
 pnpm build        # production build of the dashboard
 ```
 
@@ -16,7 +16,7 @@ The tests cover the review rules (first decision wins, reasons, caption limits, 
 pnpm dev          # http://localhost:3000
 ```
 
-Runs on fictional sample drafts. Try: approve, reject with a reason, edit a caption, mark as posted, download the MP4 and still, filters and search in the Library, the Insights page.
+Runs on fictional sample drafts with sign-in off (a "Sign-in off (local preview)" badge shows in the header). Try: approve, reject with a reason, edit a caption, mark as posted, download the MP4 and still, filters and search in the Library, the Insights page.
 
 ## 3. Full pipeline locally
 
@@ -35,6 +35,7 @@ pnpm telegram:poll                                                 # Telegram wi
 
 | #   | Do                                                                                                                 | Expect                                                                                                             |
 | --- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| 0   | Open `/signup`, create your account with `OWNER_EMAIL` and `SIGNUP_CODE`; sign out; sign in at `/login`            | You land in the Studio; `/signup` then says sign-up is closed; other emails and wrong codes are refused            |
 | 1   | Studio → **Scan now**                                                                                              | Inngest UI shows `trend-scout` running; Studio's source list fills in                                              |
 | 2   | Wait for `produce-draft` (2–5 min per story)                                                                       | Steps: reactions → research → script → claim check → voice → render                                                |
 | 3   | —                                                                                                                  | Telegram receives the video with Approve / Reject / Edit; the draft is in Review on the dashboard                  |

@@ -2,7 +2,7 @@
 
 import { RefreshCw } from "lucide-react";
 import { useState, useTransition } from "react";
-import { requestScanAction, type ActionResult } from "@/app/drafts/[id]/actions";
+import { requestScanAction, type ActionResult } from "@/lib/actions";
 
 /** Asks the trend scout to run now instead of waiting for the schedule. */
 export function ScanButton() {

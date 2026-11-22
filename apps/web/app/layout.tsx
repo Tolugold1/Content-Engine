@@ -4,7 +4,6 @@ import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { BackgroundEmblem } from "@/components/emblem";
-import { SiteHeader } from "@/components/site-header";
 
 export const metadata: Metadata = {
   title: { default: "Golden Gist Studio", template: "%s · Golden Gist Studio" },
@@ -23,8 +22,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body className="min-h-dvh font-sans antialiased">
         <div className="bg-aura" aria-hidden />
         <BackgroundEmblem />
-        <SiteHeader />
-        <main className="mx-auto max-w-7xl px-4 pb-24 sm:px-6">{children}</main>
+        {children}
       </body>
     </html>
   );

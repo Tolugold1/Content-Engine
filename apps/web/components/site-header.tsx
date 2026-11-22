@@ -1,10 +1,12 @@
-import { Send } from "lucide-react";
+import { LogOut, Send } from "lucide-react";
 import Link from "next/link";
 import { isConfigured } from "@content-engine/config";
+import { signOutAction } from "@/lib/auth/actions";
+import type { Viewer } from "@/lib/auth/session";
 import { isSampleMode, listDrafts } from "@/lib/data";
 import { NavLinks } from "./nav-links";
 
-export async function SiteHeader() {
+export async function SiteHeader({ viewer }: { viewer: Viewer }) {
   const pending = await listDrafts({ status: "pending_review" });
   const telegramConnected = isConfigured("telegram");
 
@@ -34,6 +36,21 @@ export async function SiteHeader() {
             <Send className="h-3 w-3" aria-hidden />
             <span className="hidden sm:inline">{telegramConnected ? "Telegram alerts on" : "Telegram not connected"}</span>
           </span>
+          {viewer.mode === "owner" ? (
+            <form action={signOutAction}>
+              <button type="submit" className="btn btn-ghost btn-sm" title={`Signed in as ${viewer.email}`}>
+                <LogOut className="h-3.5 w-3.5" aria-hidden />
+                <span className="hidden lg:inline">Sign out</span>
+              </button>
+            </form>
+          ) : (
+            <span
+              className="hidden rounded-full border border-warn/30 px-2.5 py-1 text-[11px] text-warn md:inline"
+              title="Set the sign-in keys (docs/SETUP.md)"
+            >
+              Sign-in off (local preview)
+            </span>
+          )}
         </div>
       </div>
     </header>

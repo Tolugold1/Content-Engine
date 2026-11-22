@@ -3,7 +3,7 @@
 import { PLATFORM_INFO, PLATFORMS, type Platform, type PostRecord } from "@content-engine/core";
 import { ExternalLink } from "lucide-react";
 import { useState, useTransition, type FormEvent } from "react";
-import { markPostedAction } from "@/app/drafts/[id]/actions";
+import { markPostedAction } from "@/lib/actions";
 import { PlatformPill } from "./badges";
 
 /** After you post by hand, paste the link here so analytics can follow the post. */

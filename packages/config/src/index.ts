@@ -9,7 +9,13 @@ const EnvSchema = z.object({
   WORKER_PORT: z.preprocess((v) => (v === "" ? undefined : v), z.coerce.number().int().default(3001)),
 
   SUPABASE_URL: optional,
+  SUPABASE_ANON_KEY: optional,
   SUPABASE_SERVICE_ROLE_KEY: optional,
+
+  /** The only account allowed to sign up and sign in. */
+  OWNER_EMAIL: optional,
+  /** One-time code required to create the owner account (sign-up closes once it exists). */
+  SIGNUP_CODE: optional,
 
   ANTHROPIC_API_KEY: optional,
 
@@ -30,7 +36,6 @@ const EnvSchema = z.object({
   R2_SECRET_ACCESS_KEY: optional,
   R2_BUCKET: optional,
 
-  DASHBOARD_PASSWORD: optional,
   DASHBOARD_TIMEZONE: z.preprocess((v) => (v === "" ? undefined : v), z.string().default("Africa/Lagos")),
 
   INNGEST_DEV: optional,
@@ -59,6 +64,7 @@ export function resetEnvCache(): void {
 /** Each feature and the keys it needs. Used for errors, the health endpoint and the setup guide. */
 export const FEATURES = {
   database: ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"],
+  auth: ["SUPABASE_URL", "SUPABASE_ANON_KEY", "OWNER_EMAIL"],
   claude: ["ANTHROPIC_API_KEY"],
   voice: ["ELEVENLABS_API_KEY", "ELEVENLABS_VOICE_ID"],
   storage: ["R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET"],
@@ -73,6 +79,7 @@ export type Feature = keyof typeof FEATURES;
 /** Section of docs/SETUP.md that explains each feature's keys. */
 export const FEATURE_DOCS: Record<Feature, string> = {
   database: "supabase",
+  auth: "authentication",
   claude: "claude",
   voice: "elevenlabs",
   storage: "cloudflare-r2",
