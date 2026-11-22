@@ -28,7 +28,8 @@ export function HeroEmblem() {
  */
 export function BackgroundEmblem() {
   const pathname = usePathname();
-  if (pathname === "/") return null;
+  // The Studio hero and the sign-in pages show the emblem up front instead.
+  if (pathname === "/" || pathname === "/login" || pathname === "/signup") return null;
   return (
     <div
       aria-hidden

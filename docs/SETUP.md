@@ -7,18 +7,19 @@ Everything the engine needs comes from environment variables. Copy `.env.example
 
 Leave a value empty and that feature is skipped (the health endpoints at `/api/health` and the worker's `/health` show what is configured). A step that needs a missing key fails with a message naming the key and pointing to the section below.
 
-| Feature                         | Keys                                                                     | Needed for                                        | Cost               |
-| ------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------- | ------------------ |
-| [Supabase](#supabase)           | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`                              | Everything beyond sample mode                     | Free tier          |
-| [Inngest](#inngest)             | `INNGEST_DEV` (local) or `INNGEST_EVENT_KEY` + `INNGEST_SIGNING_KEY`     | Running the pipeline                              | Free (self-hosted) |
-| [Claude](#claude)               | `ANTHROPIC_API_KEY`                                                      | Triage, scripts, claim checks, screenshot reading | ~$15–20/month      |
-| [ElevenLabs](#elevenlabs)       | `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`                              | Your cloned voice                                 | $6–22/month        |
-| [Cloudflare R2](#cloudflare-r2) | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` | Storing audio, videos, stills                     | Free tier (10 GB)  |
-| [Telegram](#telegram)           | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_WEBHOOK_SECRET`      | Review on your phone                              | Free               |
-| [X API](#x-api)                 | `X_BEARER_TOKEN`                                                         | X trends and reactions (optional)                 | ~$15–22/month      |
-| [YouTube](#youtube)             | `YOUTUBE_API_KEY`                                                        | Trending videos + Shorts metrics (optional)       | Free               |
-| [Football data](#football-data) | `FOOTBALL_DATA_API_KEY`                                                  | Matchday Hype fixtures (optional)                 | Free tier          |
-| Dashboard                       | `APP_URL`, `DASHBOARD_PASSWORD`, `DOMAIN`                                | Public access                                     | —                  |
+| Feature                           | Keys                                                                     | Needed for                                        | Cost               |
+| --------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------- | ------------------ |
+| [Supabase](#supabase)             | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`                              | Everything beyond sample mode                     | Free tier          |
+| [Authentication](#authentication) | `SUPABASE_ANON_KEY`, `OWNER_EMAIL`, `SIGNUP_CODE`                        | Signing in to the dashboard                       | Free               |
+| [Inngest](#inngest)               | `INNGEST_DEV` (local) or `INNGEST_EVENT_KEY` + `INNGEST_SIGNING_KEY`     | Running the pipeline                              | Free (self-hosted) |
+| [Claude](#claude)                 | `ANTHROPIC_API_KEY`                                                      | Triage, scripts, claim checks, screenshot reading | ~$15–20/month      |
+| [ElevenLabs](#elevenlabs)         | `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`                              | Your cloned voice                                 | $6–22/month        |
+| [Cloudflare R2](#cloudflare-r2)   | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` | Storing audio, videos, stills                     | Free tier (10 GB)  |
+| [Telegram](#telegram)             | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_WEBHOOK_SECRET`      | Review on your phone                              | Free               |
+| [X API](#x-api)                   | `X_BEARER_TOKEN`                                                         | X trends and reactions (optional)                 | ~$15–22/month      |
+| [YouTube](#youtube)               | `YOUTUBE_API_KEY`                                                        | Trending videos + Shorts metrics (optional)       | Free               |
+| [Football data](#football-data)   | `FOOTBALL_DATA_API_KEY`                                                  | Matchday Hype fixtures (optional)                 | Free tier          |
+| Dashboard                         | `APP_URL`, `DOMAIN`                                                      | Public access                                     | —                  |
 
 ## Supabase
 
@@ -27,6 +28,24 @@ Leave a value empty and that feature is skipped (the health endpoints at `/api/h
 3. **Project Settings → API**: copy the **Project URL** into `SUPABASE_URL` and the **service_role** key into `SUPABASE_SERVICE_ROLE_KEY`.
 
 The service-role key bypasses row-level security, so it must only ever live on the server (it does: nothing in the browser talks to Supabase). Every table has RLS on with no public policies.
+
+## Authentication
+
+The dashboard has exactly one account: yours. Only `OWNER_EMAIL` can sign up or sign in, sign-up also needs the
+one-time `SIGNUP_CODE`, and sign-up closes for good once your account exists.
+
+1. Supabase **Project Settings → API Keys**: copy the **publishable** (or legacy **anon**) key into `SUPABASE_ANON_KEY`.
+2. Set `OWNER_EMAIL` to your email and `SIGNUP_CODE` to a random code (`openssl rand -hex 16`).
+3. Supabase **Authentication → Sign In / Providers**: keep **Email** enabled and turn **off** "Allow new users to sign
+   up". The app creates your account itself through the admin API, so nobody can sign up directly against Supabase.
+4. Supabase **Authentication → URL Configuration**: set **Site URL** to your `APP_URL`.
+5. Open `/signup` on the dashboard, enter your email, a password (12+ characters) and the code. You land in the Studio.
+   From then on use `/login`; `SIGNUP_CODE` can be deleted from `.env`.
+
+How it is enforced: the proxy verifies the session token on every request (pages redirect to `/login`, the API answers
+401, cross-site writes get 403), and every page, server action and API route checks again on the server. Without these
+keys, a production server refuses all traffic (503); `pnpm dev` runs open on sample data for local previews only.
+Forgot your password? Reset it in Supabase **Authentication → Users**.
 
 ## Inngest
 

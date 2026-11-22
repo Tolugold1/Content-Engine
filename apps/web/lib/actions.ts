@@ -4,6 +4,7 @@ import { Platform } from "@content-engine/core";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { describeError } from "@/lib/api";
+import { assertOwner } from "@/lib/auth/session";
 import { reviews } from "@/lib/service";
 
 export type ActionResult = { ok: true; message: string } | { ok: false; error: string };
@@ -13,6 +14,7 @@ const DraftId = z.string().min(1).max(64);
 /** Runs one service call and refreshes every page that shows drafts. */
 async function run(task: () => Promise<string>): Promise<ActionResult> {
   try {
+    await assertOwner();
     const message = await task();
     revalidatePath("/", "layout");
     return { ok: true, message };

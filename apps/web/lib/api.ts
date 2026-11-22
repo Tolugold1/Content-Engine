@@ -3,6 +3,7 @@ import { DraftNotFoundError } from "@content-engine/db";
 import { MissingConfigError } from "@content-engine/config";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { assertOwner, UnauthorizedError } from "./auth/session";
 
 /** JSON error body in the RFC 9457 "problem details" shape. */
 function problem(status: number, title: string, detail?: string, extra: Record<string, unknown> = {}) {
@@ -11,6 +12,7 @@ function problem(status: number, title: string, detail?: string, extra: Record<s
 
 /** Maps domain errors to HTTP statuses so every endpoint answers the same way. */
 export function toErrorResponse(error: unknown): NextResponse {
+  if (error instanceof UnauthorizedError) return problem(401, "Sign in required", error.message);
   if (error instanceof ReviewConflictError) return problem(409, "Already reviewed", error.message, { review: error.existing });
   if (error instanceof ReviewRuleError) return problem(422, "Not allowed", error.message);
   if (error instanceof DraftNotFoundError) return problem(404, "Draft not found", error.message);
@@ -21,8 +23,10 @@ export function toErrorResponse(error: unknown): NextResponse {
   return problem(500, "Internal error");
 }
 
+/** Every API route runs through here: owner check first, then one consistent error format. */
 export async function handle(run: () => Promise<Response>): Promise<Response> {
   try {
+    await assertOwner();
     return await run();
   } catch (error) {
     return toErrorResponse(error);
@@ -35,7 +39,13 @@ export async function readJson<S extends z.ZodType>(request: Request, schema: S)
 
 /** A short message for the dashboard's server actions (same mapping as the API). */
 export function describeError(error: unknown): string {
-  if (error instanceof ReviewConflictError || error instanceof ReviewRuleError || error instanceof MissingConfigError) return error.message;
+  if (
+    error instanceof ReviewConflictError ||
+    error instanceof ReviewRuleError ||
+    error instanceof MissingConfigError ||
+    error instanceof UnauthorizedError
+  )
+    return error.message;
   if (error instanceof DraftNotFoundError) return "That draft no longer exists.";
   if (error instanceof z.ZodError) return "That input doesn't look right.";
   console.error("[action]", error);

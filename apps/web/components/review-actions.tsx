@@ -2,7 +2,7 @@
 
 import { Check, X } from "lucide-react";
 import { useState, useTransition } from "react";
-import { approveDraftAction, rejectDraftAction, type ActionResult } from "@/app/drafts/[id]/actions";
+import { approveDraftAction, rejectDraftAction, type ActionResult } from "@/lib/actions";
 
 import { QUICK_REJECT_REASONS } from "@content-engine/core";
 

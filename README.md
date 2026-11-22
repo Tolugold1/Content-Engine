@@ -17,6 +17,7 @@ approval. Nothing is published without a human decision.
   templates (Gist in 30 Seconds, Matchday Hype, Quick Explainer) plus a still for feeds.
 - **Review anywhere**: Telegram buttons and the dashboard share one set of rules and one database row; the first
   decision wins. Approval sends a posting kit with captions sized per platform.
+- **Private by design**: single-owner sign-in (Supabase Auth); only your email can sign up, once, with a server-side code.
 - **Learning loop**: post links, metrics at 24h/72h (APIs or screenshot reading), cost per video, first-pass approval
   rate and predicted-vs-actual virality on the Insights page. An eval suite gates prompt changes in CI.
 
